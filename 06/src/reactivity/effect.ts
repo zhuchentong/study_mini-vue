@@ -55,9 +55,11 @@ export function trigger(target: any, key: string| Symbol) {
   })
 }
 
-export function effect(fn: Function): void {
+export function effect(fn: Function) {
   // 创建一个 ReactiveEffect 实例
   const _effect = new ReactiveEffect(fn)
   // 执行 run 方法
   _effect.run()
+  // 返回一个 runner 函数，调用时会执行 run 方法
+  return _effect.run.bind(_effect)
 }

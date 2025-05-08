@@ -3,9 +3,12 @@ let activeEffect: ReactiveEffect
 
 class ReactiveEffect {
   _fn: Function
+  _scheduler?: Function
 
-  constructor(fn: Function) {
+  // scheduler 是一个函数，用于调度执行 effect
+  constructor(fn: Function, scheduler?: Function) {
     this._fn = fn
+    this._scheduler = scheduler
   }
 
   run() {
@@ -13,6 +16,10 @@ class ReactiveEffect {
     activeEffect = this
     // 执行 fn 函数
     return this._fn()
+  }
+
+  scheduler() {
+     this._scheduler && this._scheduler() 
   }
 }
 
@@ -51,14 +58,20 @@ export function trigger(target: any, key: string| Symbol) {
 
   // 触发依赖
   dep.forEach((effect: ReactiveEffect) => {
-    effect.run()
+    // 如果 effect 有 scheduler 函数，说明需要调度执行
+    // 否则直接执行 run 方法
+    if (effect.scheduler) {
+      effect.scheduler()
+    }else {
+      effect.run()
+    }
   })
 }
 
-export function effect(fn: Function) {
+export function effect(fn: Function, options: any = {}) {
   // 创建一个 ReactiveEffect 实例
-  const _effect = new ReactiveEffect(fn)
-  // 执行 run 方法
+  const _effect = new ReactiveEffect(fn, options?.scheduler)
+
   _effect.run()
   // 返回一个 runner 函数，调用时会执行 run 方法
   return _effect.run.bind(_effect)

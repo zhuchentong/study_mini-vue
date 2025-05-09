@@ -1,26 +1,44 @@
 // 全局变量，存储当前的 effect
-let activeEffect: ReactiveEffect
+let activeEffect: ReactiveEffect | undefined
 
 class ReactiveEffect {
   _fn: Function
-  _scheduler?: Function
+  deps: Set<Set<ReactiveEffect>> = new Set()
 
   // scheduler 是一个函数，用于调度执行 effect
-  constructor(fn: Function, scheduler?: Function) {
+  constructor(
+    fn: Function,
+    public scheduler?: Function, 
+    public onStop?: Function
+  ) {
     this._fn = fn
-    this._scheduler = scheduler
   }
 
   run() {
     // 更新全局的 activeEffect
     activeEffect = this
     // 执行 fn 函数
-    return this._fn()
+    const result = this._fn()
+
+    activeEffect = undefined
+
+    return result
   }
 
-  scheduler() {
-     this._scheduler && this._scheduler() 
+  stop() {
+    if(this.onStop) {
+      this.onStop()
+    }
+
+    cleanupEffectDeps(this)
+
   }
+}
+
+function cleanupEffectDeps(effect: ReactiveEffect) {
+  effect.deps.forEach((dep) => {
+    dep.delete(effect)
+  })
 }
 
 // 存储 target 和 key 对应的 effect 集合
@@ -33,21 +51,26 @@ export function track(target: any, key: string | Symbol) {
   // 从 targetMap 中取出 depsMap
   let depsMap = targetMap.get(target)
   if (!depsMap) {
-    targetMap.set(target, (depsMap = new Map()))
-   }
+    depsMap = new Map()
+    targetMap.set(target, depsMap)
+  }
 
   //  从 depsMap 中取出 dep
   let dep = depsMap.get(key)
   if (!dep) {
-    depsMap.set(key, (dep = new Set()))
+    dep = new Set()
+    depsMap.set(key, dep)
   }
 
   // 收集依赖
   // 这里的 dep 是一个 Set，存储着所有依赖于这个属性的 effect
   dep.add(activeEffect)
+  // 将 dep 添加到 activeEffect 的 deps 中
+  // 这样做的目的是为了在 stop 方法中，能够找到所有依赖于这个属性的 effect
+  activeEffect.deps.add(dep)
 }
 
-export function trigger(target: any, key: string| Symbol) {
+export function trigger(target: any, key: string | Symbol) {
   let depsMap = targetMap.get(target)
   // 如果没有 depsMap，说明没有触发依赖，直接返回
   if (!depsMap) return
@@ -62,7 +85,7 @@ export function trigger(target: any, key: string| Symbol) {
     // 否则直接执行 run 方法
     if (effect.scheduler) {
       effect.scheduler()
-    }else {
+    } else {
       effect.run()
     }
   })
@@ -70,9 +93,27 @@ export function trigger(target: any, key: string| Symbol) {
 
 export function effect(fn: Function, options: any = {}) {
   // 创建一个 ReactiveEffect 实例
-  const _effect = new ReactiveEffect(fn, options?.scheduler)
-
+  const _effect = new ReactiveEffect(
+    fn, 
+    options?.scheduler, 
+    options?.onStop
+  )
+  // 执行 run 方法
   _effect.run()
   // 返回一个 runner 函数，调用时会执行 run 方法
-  return _effect.run.bind(_effect)
+  const runner: any = _effect.run.bind(_effect)
+  // runner 绑定Effect实例，便于effect.stop()方法使用
+  runner.effect = _effect
+
+  return runner
+}
+
+/**
+ * 停止响应式
+ * @param runner 
+ */
+export function stop(runner: Function & { effect: ReactiveEffect }) {
+  if (runner.effect) {
+    runner.effect.stop()
+  }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { reactive } from '../reactive'
-import { effect } from '../effect'
+import { effect,stop } from '../effect'
 
 describe("effect", () => {
   it("should work", () => {
@@ -57,5 +57,45 @@ describe("effect", () => {
   
     run()
     expect(dummy).toBe(2)
+  })
+
+  it("stop", () => {
+    let dummy: number = 0
+    const obj = reactive({ prop: 1 })
+
+    const runner = effect(() => {
+      dummy = obj.prop + 1 
+    })
+
+    expect(dummy).toBe(2)
+    obj.prop++
+    expect(dummy).toBe(3)
+    // stop effect
+    stop(runner)
+    obj.prop++
+    expect(dummy).toBe(3)
+    // resume effect
+    runner()
+    expect(dummy).toBe(4)
+  })
+
+  it("onStop", () => {
+    const obj = reactive({ foo: 1 })
+    const onStop = vi.fn()
+    let dummy: number = 0
+    const runner = effect(() => {
+      dummy = obj.foo
+    }, { onStop })
+    expect(dummy).toBe(1)
+
+    stop(runner)
+    expect(onStop).toBeCalledTimes(1)
+    
+
+    obj.foo++
+    expect(dummy).toBe(1) // dummy should not change after stop
+
+    runner() // calling runner should not change dummy
+    expect(dummy).toBe(2) // dummy should still be 1
   })
 })

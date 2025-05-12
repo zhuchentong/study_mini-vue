@@ -3,3 +3,7 @@ export function isObject(value: any): boolean {
 }
 
 export const extend = Object.assign
+
+export function hasChanged(value: any, oldValue: any): boolean {
+  return !Object.is(value, oldValue)
+}

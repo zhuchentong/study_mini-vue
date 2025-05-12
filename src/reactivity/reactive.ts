@@ -29,3 +29,7 @@ export function isReactive(value: any): boolean {
 export function isReadonly(value: any): boolean {
   return!!value[ReactiveFlags.IS_READONLY] 
 }
+
+export function isProxy(value: any): boolean{
+  return isReactive(value) || isReadonly(value)
+}

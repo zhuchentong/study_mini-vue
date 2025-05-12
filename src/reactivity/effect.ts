@@ -80,9 +80,13 @@ export function track(target: any, key: string | Symbol) {
     depsMap.set(key, dep)
   }
 
+  trackEffects(dep)
+}
+
+export function trackEffects(dep: any) {
   // 如果 dep 中已经有 activeEffect，
   // 说明已经收集过依赖，不需要再次收集
-  if (!dep.has(activeEffect)) {
+  if (!dep.has(activeEffect) && activeEffect) {
     // 收集依赖
     // 这里的 dep 是一个 Set，存储着所有依赖于这个属性的 effect
     dep.add(activeEffect)
@@ -98,10 +102,15 @@ export function trigger(target: any, key: string | Symbol) {
   if (!depsMap) return
 
   let dep = depsMap.get(key)
+
+  // 触发依赖
+  triggerEffects(dep)
+}
+
+export function triggerEffects(dep: any) {
   // 如果没有 dep，说明没有触发依赖，直接返回
   if (!dep) return
 
-  // 触发依赖
   dep.forEach((effect: ReactiveEffect) => {
     // 如果 effect 有 scheduler 函数，说明需要调度执行
     // 否则直接执行 run 方法

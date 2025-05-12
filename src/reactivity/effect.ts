@@ -1,36 +1,51 @@
 // 全局变量，存储当前的 effect
 let activeEffect: ReactiveEffect | undefined
+let shouldTrack = true
 
 class ReactiveEffect {
+  active = true
   _fn: Function
   deps: Set<Set<ReactiveEffect>> = new Set()
 
   // scheduler 是一个函数，用于调度执行 effect
   constructor(
     fn: Function,
-    public scheduler?: Function, 
+    public scheduler?: Function,
     public onStop?: Function
   ) {
     this._fn = fn
   }
 
   run() {
+    if (!this.active) {
+      return this._fn()
+    }
+
+    // 更新 shouldTrack 的值
+    shouldTrack = true
     // 更新全局的 activeEffect
     activeEffect = this
     // 执行 fn 函数
     const result = this._fn()
 
-    activeEffect = undefined
+    shouldTrack = false
 
     return result
   }
 
   stop() {
-    if(this.onStop) {
+    if (!this.active) {
+      return
+    }
+
+    if (this.onStop) {
       this.onStop()
     }
 
     cleanupEffectDeps(this)
+
+    this.active = false
+    shouldTrack = false
 
   }
 }
@@ -39,6 +54,8 @@ function cleanupEffectDeps(effect: ReactiveEffect) {
   effect.deps.forEach((dep) => {
     dep.delete(effect)
   })
+
+  effect.deps.clear()
 }
 
 // 存储 target 和 key 对应的 effect 集合
@@ -46,6 +63,7 @@ let targetMap = new Map()
 
 export function track(target: any, key: string | Symbol) {
   // 如果没有 activeEffect，说明没有依赖收集的必要
+  if (!isTracking()) return
   if (!activeEffect) return
 
   // 从 targetMap 中取出 depsMap
@@ -62,12 +80,16 @@ export function track(target: any, key: string | Symbol) {
     depsMap.set(key, dep)
   }
 
-  // 收集依赖
-  // 这里的 dep 是一个 Set，存储着所有依赖于这个属性的 effect
-  dep.add(activeEffect)
-  // 将 dep 添加到 activeEffect 的 deps 中
-  // 这样做的目的是为了在 stop 方法中，能够找到所有依赖于这个属性的 effect
-  activeEffect.deps.add(dep)
+  // 如果 dep 中已经有 activeEffect，
+  // 说明已经收集过依赖，不需要再次收集
+  if (!dep.has(activeEffect)) {
+    // 收集依赖
+    // 这里的 dep 是一个 Set，存储着所有依赖于这个属性的 effect
+    dep.add(activeEffect)
+    // 将 dep 添加到 activeEffect 的 deps 中
+    // 这样做的目的是为了在 stop 方法中，能够找到所有依赖于这个属性的 effect
+    activeEffect.deps.add(dep)
+  }
 }
 
 export function trigger(target: any, key: string | Symbol) {
@@ -94,8 +116,8 @@ export function trigger(target: any, key: string | Symbol) {
 export function effect(fn: Function, options: any = {}) {
   // 创建一个 ReactiveEffect 实例
   const _effect = new ReactiveEffect(
-    fn, 
-    options?.scheduler, 
+    fn,
+    options?.scheduler,
     options?.onStop
   )
   // 执行 run 方法
@@ -116,4 +138,8 @@ export function stop(runner: Function & { effect: ReactiveEffect }) {
   if (runner.effect) {
     runner.effect.stop()
   }
+}
+
+export function isTracking() {
+  return shouldTrack && activeEffect !== undefined
 }

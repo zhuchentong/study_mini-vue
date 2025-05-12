@@ -1,5 +1,5 @@
-import {describe, expect, it} from 'vitest'
-import { isReactive, reactive } from '../reactive'
+import {describe, expect, it, vi} from 'vitest'
+import { isReactive, isReadonly, reactive, readonly } from '../reactive'
 
 describe("reactive",()=>{
   it("should work",()=>{
@@ -17,5 +17,57 @@ describe("reactive",()=>{
     const reactiveObject = reactive({foo: 1})
     expect(isReactive(reactiveObject)).toBe(true)
     expect(isReactive({foo: 1})).toBe(false)
+  })
+
+  it("should work",()=>{
+    console.warn = vi.fn()
+    const user = readonly({
+      age: 10
+    })
+
+    user.age++
+
+    // readonly 不允许修改，否则会报错
+    expect(console.warn).toBeCalled()
+  })
+
+  it("isReadonly", () => {
+    const user = readonly({
+      age: 10
+    })
+
+    expect(user).not.toBe({age: 10})
+    expect(isReadonly(user)).toBe(true)
+    expect(isReadonly({age: 10})).toBe(false)
+  })
+
+  it("nested reactive", () => {
+    const original = {
+      nested: {
+        foo: 1
+      },
+      array: [{bar: 2}]
+    }
+
+    const observed = reactive(original)
+    expect(isReactive(observed.nested)).toBe(true)
+    expect(isReactive(observed.array)).toBe(true)
+    expect(isReactive(original.array)).toBe(false)
+    expect(isReactive(original.nested)).toBe(false)
+  })
+
+  it("nested readonly", () => {
+    const original = {
+      nested: {
+        foo: 1
+      },
+      array: [{bar: 2}]
+    }
+
+    const observed = readonly(original)
+    expect(isReadonly(observed.nested)).toBe(true)
+    expect(isReadonly(observed.array)).toBe(true)
+    expect(isReadonly(original.array)).toBe(false)
+    expect(isReadonly(original.nested)).toBe(false)
   })
 })

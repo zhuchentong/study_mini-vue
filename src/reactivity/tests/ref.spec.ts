@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { effect } from "../effect";
-import { ref } from "../ref";
+import { isRef, ref, unRef } from "../ref";
 import { isReactive } from "../reactive";
 
 describe("Ref",()=>{
@@ -35,5 +35,17 @@ describe("Ref",()=>{
     expect(obj.value.count).toBe(2)
 
     expect(isReactive(obj.value)).toBe(true)
+  })
+
+  it("isRef",()=>{
+    const obj = ref(1)
+    expect(isRef(obj)).toBe(true)
+    expect(isRef(1)).toBe(false)
+  })
+
+  it("unRef",()=>{
+    const obj = ref(1)
+    expect(unRef(obj)).toBe(1)
+    expect(unRef(1)).toBe(1)
   })
 })

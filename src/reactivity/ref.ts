@@ -6,8 +6,10 @@ class RefImpl {
   private _raw_value: any;
   private _value: any;
   private dep: Set<any>
+  public readonly __v_isRef = true
 
   constructor(public raw: any) {
+    this.__v_isRef = true;
     this._raw_value = raw;
     this._value = toReactive(raw)
     // 存储依赖
@@ -41,4 +43,12 @@ export function ref(raw: any) {
 
 function toReactive(raw: any) {
   return isObject(raw) ? reactive(raw) : raw;
+}
+
+export function isRef(ref: any){
+  return !!ref.__v_isRef
+}
+
+export function unRef(ref: any){
+  return isRef(ref)? ref.value : ref
 }

@@ -1,12 +1,13 @@
-import { isObject } from "../shared"
+import { extend, isObject } from "../shared"
 import { track, trigger } from "./effect"
 import { ReactiveFlags,readonly,reactive } from "./reactive"
 
 const get = createGetter()
 const set = createSetter()
 const readonlyGet = createGetter(true)
+const shadowReadonlyGet = createGetter(true, true)
 
-function createGetter(isReadonly = false) {
+function createGetter(isReadonly = false, isShadow = false) {
   return function get(target: any, key: string) {
     if(key === ReactiveFlags.IS_REACTIVE) {
      return !isReadonly 
@@ -18,10 +19,13 @@ function createGetter(isReadonly = false) {
 
     const result = Reflect.get(target, key)
 
-
     // 依赖收集
     if (!isReadonly) {
       track(target, key)
+    }
+
+    if(isShadow){
+      return result
     }
 
     if(isObject(result)){
@@ -56,3 +60,7 @@ export const readonlyHandlers = {
     return true
   } 
 }
+
+export const shadowReadonlyHandlers = extend({}, readonlyHandlers, {
+  get: shadowReadonlyGet,
+})

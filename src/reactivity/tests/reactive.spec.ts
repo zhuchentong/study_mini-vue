@@ -1,5 +1,5 @@
 import {describe, expect, it, vi} from 'vitest'
-import { isReactive, isReadonly, reactive, readonly } from '../reactive'
+import { isReactive, isReadonly, reactive, readonly, shadowReadonly } from '../reactive'
 
 describe("reactive",()=>{
   it("should work",()=>{
@@ -69,5 +69,13 @@ describe("reactive",()=>{
     expect(isReadonly(observed.array)).toBe(true)
     expect(isReadonly(original.array)).toBe(false)
     expect(isReadonly(original.nested)).toBe(false)
+  })
+
+  it("shadow readonly",()=>{
+    const original = {foo: {a:1}} as const
+    const observed = shadowReadonly(original)
+
+    expect(isReadonly(observed)).toBe(true)
+    expect(isReadonly(observed.foo)).toBe(false)
   })
 })

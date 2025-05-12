@@ -1,4 +1,4 @@
-import { mutableHandlers, readonlyHandlers } from "./baseHandler"
+import { mutableHandlers, readonlyHandlers ,shadowReadonlyHandlers} from "./baseHandler"
 
 export enum ReactiveFlags {
   IS_REACTIVE = "__v_isReactive", // 是否是 reactive 对象
@@ -13,6 +13,9 @@ export function readonly(raw: Record<string, any>): any {
   return createActiveObject(raw, readonlyHandlers)
 }
 
+export function shadowReadonly(raw: Record<string, any>): any {
+  return createActiveObject(raw, shadowReadonlyHandlers) 
+}
 
 function createActiveObject(raw: Record<string, any>, baseHandlers: ProxyHandler<any>){
   return new Proxy(raw, baseHandlers)

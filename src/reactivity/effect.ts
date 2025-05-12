@@ -2,7 +2,7 @@
 let activeEffect: ReactiveEffect | undefined
 let shouldTrack = true
 
-class ReactiveEffect {
+export class ReactiveEffect {
   active = true
   _fn: Function
   deps: Set<Set<ReactiveEffect>> = new Set()
